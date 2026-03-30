@@ -1,0 +1,33 @@
+# Data collection
+requests>=2.31.0
+httpx>=0.25.0
+beautifulsoup4>=4.12.0
+feedparser>=6.0.0
+
+# Databases
+psycopg2-binary>=2.9.9
+pymongo>=4.6.0
+neo4j>=5.14.0
+chromadb>=0.4.22
+
+# Data processing
+pandas>=2.1.0
+python-dotenv>=1.0.0
+
+# Embeddings
+sentence-transformers>=2.2.0
+
+# Agent framework (uncomment one after decision)
+# langchain>=0.1.0
+# langchain-community>=0.0.10
+# openfang>=0.1.0
+
+# LLM
+ollama>=0.1.0
+
+# UI
+streamlit>=1.29.0
+
+# Development
+pytest>=7.4.0
+black>=23.12.0

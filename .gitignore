@@ -1,0 +1,53 @@
+# Environment and secrets
+.env
+*.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Data and cache
+data/cache/*.json
+data/cache/*.csv
+*.db
+*.sqlite
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Docker volumes (data persisted in Docker, not repo)
+postgres_data/
+mongo_data/
+neo4j_data/
+chroma_data/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Build
+dist/
+build/
+*.egg-info/

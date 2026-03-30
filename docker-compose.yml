@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - structured data (markets, articles, indicators)
+  postgres:
+    image: postgres:15
+    container_name: pmi-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pmi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pmi_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-prediction_market_intel}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pmi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # MongoDB - nested documents (Reddit posts)
+  mongodb:
+    image: mongo:7
+    container_name: pmi-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-pmi}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-pmi_dev_password}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Neo4j - graph relationships
+  neo4j:
+    image: neo4j:5
+    container_name: pmi-neo4j
+    environment:
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-pmi_dev_password}
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: wget -qO- http://localhost:7474 || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ChromaDB - vector embeddings for RAG
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: pmi-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      ANONYMIZED_TELEMETRY: "false"
+
+volumes:
+  postgres_data:
+  mongo_data:
+  neo4j_data:
+  chroma_data:
