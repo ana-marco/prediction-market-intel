@@ -67,11 +67,11 @@ def init_mongodb() -> bool:
         
         load_dotenv()
         
+        # Use connection string format (more reliable on Windows)
+        user = os.getenv("MONGO_USER", "pmi")
+        password = os.getenv("MONGO_PASSWORD", "pmi_dev_password")
         client = pymongo.MongoClient(
-            host="localhost",
-            port=27017,
-            username=os.getenv("MONGO_USER", "pmi"),
-            password=os.getenv("MONGO_PASSWORD", "pmi_dev_password"),
+            f"mongodb://{user}:{password}@127.0.0.1:27017/?authSource=admin"
         )
         
         db = client["prediction_market_intel"]
@@ -102,7 +102,7 @@ def init_neo4j() -> bool:
         load_dotenv()
         
         driver = GraphDatabase.driver(
-            "bolt://localhost:7687",
+            "bolt://127.0.0.1:7687",  # Use IP, not localhost (IPv6 issues on Windows)
             auth=(
                 os.getenv("NEO4J_USER", "neo4j"),
                 os.getenv("NEO4J_PASSWORD", "pmi_dev_password")
@@ -139,7 +139,7 @@ def init_chromadb() -> bool:
     try:
         import chromadb
         
-        client = chromadb.HttpClient(host="localhost", port=8000)
+        client = chromadb.HttpClient(host="127.0.0.1", port=8000)  # Use IP, not localhost
         
         # Create collections for different content types
         collections = [
@@ -197,8 +197,8 @@ def main():
     
     all_ok = True
     for db, success in results.items():
-        status = "✓" if success else "✗"
-        print(f"  {status} {db}")
+        status = "OK" if success else "FAILED"
+        print(f"  [{status}] {db}")
         if not success:
             all_ok = False
     

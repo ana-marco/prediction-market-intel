@@ -25,10 +25,10 @@ CREATE TABLE IF NOT EXISTS markets (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_markets_status ON markets(status);
-CREATE INDEX idx_markets_category ON markets(category);
-CREATE INDEX idx_markets_end_date ON markets(end_date);
-CREATE INDEX idx_markets_volume ON markets(volume_24h DESC);
+CREATE INDEX IF NOT EXISTS idx_markets_status ON markets(status);
+CREATE INDEX IF NOT EXISTS idx_markets_category ON markets(category);
+CREATE INDEX IF NOT EXISTS idx_markets_end_date ON markets(end_date);
+CREATE INDEX IF NOT EXISTS idx_markets_volume ON markets(volume_24h DESC);
 
 -- ============================================
 -- NEWS ARTICLES (Guardian, gov.uk)
@@ -52,12 +52,12 @@ CREATE TABLE IF NOT EXISTS articles (
     UNIQUE(source, external_id)
 );
 
-CREATE INDEX idx_articles_source ON articles(source);
-CREATE INDEX idx_articles_published ON articles(published_at DESC);
-CREATE INDEX idx_articles_section ON articles(section);
+CREATE INDEX IF NOT EXISTS idx_articles_source ON articles(source);
+CREATE INDEX IF NOT EXISTS idx_articles_published ON articles(published_at DESC);
+CREATE INDEX IF NOT EXISTS idx_articles_section ON articles(section);
 
 -- Full text search on title and content
-CREATE INDEX idx_articles_search ON articles 
+CREATE INDEX IF NOT EXISTS idx_articles_search ON articles 
     USING GIN (to_tsvector('english', title || ' ' || COALESCE(content, '')));
 
 -- ============================================
@@ -79,8 +79,8 @@ CREATE TABLE IF NOT EXISTS economic_indicators (
     UNIQUE(series_id, date)
 );
 
-CREATE INDEX idx_indicators_series ON economic_indicators(series_id);
-CREATE INDEX idx_indicators_date ON economic_indicators(date DESC);
+CREATE INDEX IF NOT EXISTS idx_indicators_series ON economic_indicators(series_id);
+CREATE INDEX IF NOT EXISTS idx_indicators_date ON economic_indicators(date DESC);
 
 -- ============================================
 -- DATA LINEAGE (tracking data origins)
@@ -100,8 +100,8 @@ CREATE TABLE IF NOT EXISTS data_lineage (
     UNIQUE(table_name, record_id, fetched_at)
 );
 
-CREATE INDEX idx_lineage_table ON data_lineage(table_name);
-CREATE INDEX idx_lineage_source ON data_lineage(source);
+CREATE INDEX IF NOT EXISTS idx_lineage_table ON data_lineage(table_name);
+CREATE INDEX IF NOT EXISTS idx_lineage_source ON data_lineage(source);
 
 -- ============================================
 -- HELPER FUNCTION: Update timestamp

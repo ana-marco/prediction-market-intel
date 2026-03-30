@@ -33,7 +33,7 @@ class PostgresClient:
     
     def __init__(
         self,
-        host: str = "localhost",
+        host: str = "127.0.0.1",  # Use IP, not localhost (IPv6 issues on Windows)
         port: int = 5432,
         database: str = None,
         user: str = None,
