@@ -96,8 +96,11 @@ CREATE TABLE IF NOT EXISTS data_lineage (
     transformation TEXT,            -- description of any transforms applied
     checksum VARCHAR(64),           -- SHA256 of raw data
     metadata JSONB,
-    
-    UNIQUE(table_name, record_id, fetched_at)
+
+    UNIQUE(table_name, record_id, fetched_at),
+    CONSTRAINT chk_lineage_table_name CHECK (
+        table_name IN ('markets', 'articles', 'economic_indicators')
+    )
 );
 
 CREATE INDEX IF NOT EXISTS idx_lineage_table ON data_lineage(table_name);

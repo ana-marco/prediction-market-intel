@@ -51,3 +51,9 @@ chroma_data/
 dist/
 build/
 *.egg-info/
+
+# Personal project docs (not for submission)
+CLAUDE.md
+REPORT_NOTES.md
+PROJECT_PLAN.md
+DEV_NOTES.md

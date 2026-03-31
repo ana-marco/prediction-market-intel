@@ -64,6 +64,39 @@ python scripts/load_sample_data.py
 streamlit run src/ui/app.py
 ```
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        User Query                           │
+│                   "What's happening with Iran?"             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Agent (LangChain)                      │
+│                   Decides which tools to call               │
+└─────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│  MCP Tools      │ │  MCP Tools      │ │  RAG            │
+│  (Live Data)    │ │  (Economic)     │ │  (Historical)   │
+│  - Polymarket   │ │  - FRED         │ │  - ChromaDB     │
+│  - Guardian     │ │                 │ │                 │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+        │                   │                   │
+        ▼                   ▼                   ▼
+┌─────────────────────────────────────────────────────────────┐
+│                       Data Layer                            │
+│  PostgreSQL: markets, articles, indicators, lineage, logs   │
+│  MongoDB: Reddit posts                                      │
+│  Neo4j: Topic relationships                                 │
+│  ChromaDB: Vector embeddings                                │
+└─────────────────────────────────────────────────────────────┘
+```
+
 ## Project Structure
 
 ```
@@ -79,9 +112,22 @@ prediction-market-intel/
 └── tests/
 ```
 
-## API Keys Required
+## Environment Variables
 
-- Guardian API: https://open-platform.theguardian.com/access/
-- FRED API: https://fred.stlouisfed.org/docs/api/api_key.html
+Copy `.env.example` to `.env` and fill in the values:
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `POSTGRES_USER` | PostgreSQL username | Yes |
+| `POSTGRES_PASSWORD` | PostgreSQL password | Yes |
+| `POSTGRES_DB` | PostgreSQL database name | Yes |
+| `MONGO_USER` | MongoDB username | Yes |
+| `MONGO_PASSWORD` | MongoDB password | Yes |
+| `NEO4J_USER` | Neo4j username | Yes |
+| `NEO4J_PASSWORD` | Neo4j password | Yes |
+| `GUARDIAN_API_KEY` | Guardian API key ([get one](https://open-platform.theguardian.com/access/)) | Yes |
+| `FRED_API_KEY` | FRED API key ([get one](https://fred.stlouisfed.org/docs/api/api_key.html)) | Yes |
+| `OLLAMA_HOST` | Ollama server URL (default: `http://localhost:11434`) | No |
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude | No |
 
 

@@ -137,7 +137,8 @@ class PostgresClient:
             market_id = result["id"] if result else params["id"]
         
         # Track lineage
-        self._record_lineage("markets", market_id, "polymarket", market)
+        self._record_lineage("markets", market_id, "polymarket", market,
+                             "raw API ingest from Polymarket CLOB endpoint")
         
         return market_id
     
@@ -236,7 +237,8 @@ class PostgresClient:
             result = cursor.fetchone()
             article_id = result["id"]
         
-        self._record_lineage("articles", str(article_id), source, article)
+        self._record_lineage("articles", str(article_id), source, article,
+                             f"raw API ingest from {source}")
         return article_id
     
     def get_articles(
@@ -311,7 +313,15 @@ class PostgresClient:
         with self.get_cursor() as cursor:
             cursor.execute(sql, (series_id, name, value, date, unit, frequency))
             result = cursor.fetchone()
-            return result["id"]
+            indicator_id = result["id"]
+
+        self._record_lineage(
+            "economic_indicators", str(indicator_id), "fred",
+            {"series_id": series_id, "name": name, "value": str(value),
+             "date": str(date), "unit": unit, "frequency": frequency},
+            "raw API ingest from FRED"
+        )
+        return indicator_id
     
     def get_latest_indicator(self, series_id: str) -> Optional[dict]:
         """Get most recent value for an indicator."""
@@ -351,20 +361,22 @@ class PostgresClient:
         record_id: str,
         source: str,
         raw_data: dict,
+        transformation: str = None,
     ) -> None:
         """Record data lineage for a record."""
         sql = """
             INSERT INTO data_lineage (
-                table_name, record_id, source, fetched_at, checksum, metadata
-            ) VALUES (%s, %s, %s, %s, %s, %s)
+                table_name, record_id, source, fetched_at,
+                transformation, checksum, metadata
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (table_name, record_id, fetched_at) DO NOTHING
         """
-        
+
         # Compute checksum of raw data
         checksum = hashlib.sha256(
             json.dumps(raw_data, sort_keys=True).encode()
         ).hexdigest()
-        
+
         try:
             with self.get_cursor() as cursor:
                 cursor.execute(sql, (
@@ -372,6 +384,7 @@ class PostgresClient:
                     record_id,
                     source,
                     datetime.now(),
+                    transformation,
                     checksum,
                     Json({"keys": list(raw_data.keys()) if raw_data else []}),
                 ))
