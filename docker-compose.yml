@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pmi_dev_password}
       POSTGRES_DB: ${POSTGRES_DB:-prediction_market_intel}
     ports:
-      - "5433:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -54,7 +54,7 @@ services:
 
   # ChromaDB - vector embeddings for RAG
   chromadb:
-    image: chromadb/chroma:latest
+    image: chromadb/chroma:1.5.5
     container_name: pmi-chromadb
     ports:
       - "8001:8000"  # 8000 reserved for Chainlit UI

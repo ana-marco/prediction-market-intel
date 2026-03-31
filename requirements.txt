@@ -1,8 +1,6 @@
 # Data collection
 requests>=2.31.0
-httpx>=0.25.0
 beautifulsoup4>=4.12.0
-feedparser>=6.0.0
 
 # Databases
 psycopg2-binary>=2.9.9
@@ -11,15 +9,18 @@ neo4j>=5.14.0
 chromadb>=0.4.22
 
 # Data processing
-pandas>=2.1.0
 python-dotenv>=1.0.0
 
-# Embeddings
+# Embeddings (used by ChromaDB's default embedding function)
 sentence-transformers>=2.2.0
 
+# MCP server
+fastmcp>=3.0.0
+
 # Agent framework
-langchain>=0.1.0
-langchain-community>=0.0.10
+langchain>=1.0.0
+langchain-core>=1.0.0
+langchain-community>=0.4.0
 langchain-ollama>=0.3.0
 langchain-mcp-adapters>=0.2.2
 nest-asyncio>=1.6.0

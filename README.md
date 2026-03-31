@@ -11,15 +11,16 @@ An AI agent that monitors prediction markets (Polymarket), combines them with ne
 | Polymarket | REST API | Market odds and probabilities |
 | Guardian | REST API | News articles |
 | gov.uk | Web scraping | Government press releases |
-| FRED | REST API + CSV | US economic indicators |
+| FRED | REST API | US economic indicators |
 | Reddit | Public JSON | Social sentiment |
 
 ## Tech Stack
 
 - **Databases:** PostgreSQL, MongoDB, Neo4j, ChromaDB
-- **Agent Framework:** TBD (LangChain or OpenFang)
-- **LLM:** Ollama (local)
-- **UI:** Streamlit
+- **Agent Framework:** LangChain with MCP (langchain-mcp-adapters)
+- **LLM:** Ollama (local, qwen2.5:7b)
+- **MCP Server:** FastMCP with stdio transport
+- **UI:** Chainlit
 
 ## Setup
 
@@ -46,55 +47,62 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4. Initialize databases
+### 4. Install Ollama model
+
+```bash
+ollama pull qwen2.5:7b
+```
+
+### 5. Initialize databases
 
 ```bash
 python scripts/init_db.py
 ```
 
-### 5. Load sample data
+### 6. Load data
 
 ```bash
-python scripts/load_sample_data.py
+python scripts/load_polymarket.py
+python scripts/load_guardian.py
+python scripts/load_govuk.py
+python scripts/load_fred.py
+python scripts/load_reddit.py
+python scripts/build_graph.py
+python scripts/build_embeddings.py
 ```
 
-### 6. Run the agent
+### 7. Run the agent
 
 ```bash
-streamlit run src/ui/app.py
+chainlit run src/ui/app.py
+```
+
+### 8. Run tests
+
+```bash
+pytest tests/ -v
 ```
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        User Query                           │
-│                   "What's happening with Iran?"             │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Agent (LangChain)                      │
-│                   Decides which tools to call               │
-└─────────────────────────────────────────────────────────────┘
-                              │
-              ┌───────────────┼───────────────┐
-              ▼               ▼               ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│  MCP Tools      │ │  MCP Tools      │ │  RAG            │
-│  (Live Data)    │ │  (Economic)     │ │  (Historical)   │
-│  - Polymarket   │ │  - FRED         │ │  - ChromaDB     │
-│  - Guardian     │ │                 │ │                 │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
-        │                   │                   │
-        ▼                   ▼                   ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       Data Layer                            │
-│  PostgreSQL: markets, articles, indicators, lineage, logs   │
-│  MongoDB: Reddit posts                                      │
-│  Neo4j: Topic relationships                                 │
-│  ChromaDB: Vector embeddings                                │
-└─────────────────────────────────────────────────────────────┘
+User Query (Chainlit UI)
+        |
+        v
+Agent (LangChain + qwen2.5 via Ollama)
+        |
+  MCP stdio (JSON-RPC)
+        |
+   +---------+---------+
+   v         v         v
+MCP Tools  MCP Tools  RAG Tools
+(LIVE)     (LIVE)     (HISTORICAL)
+Polymarket  FRED      ChromaDB
+Guardian    |         vectors
+  |         |         |
+  v (fallback)        v
+PostgreSQL           Neo4j
+MongoDB              (graph)
 ```
 
 ## Project Structure
@@ -102,14 +110,15 @@ streamlit run src/ui/app.py
 ```
 prediction-market-intel/
 ├── src/
-│   ├── ingestion/      # Data collection clients
-│   ├── database/       # Storage layer
-│   ├── mcp/            # MCP server and tools
-│   ├── agent/          # Agent logic
-│   └── ui/             # Streamlit app
-├── scripts/            # Setup and automation
+│   ├── ingestion/      # API clients and scrapers
+│   ├── database/       # Storage layer (schema.sql, 4 DB clients)
+│   ├── mcp/            # MCP server and 10 tools
+│   ├── agent/          # LangChain agent
+│   └── ui/             # Chainlit chat interface
+├── scripts/            # Data loading and automation
+├── tests/              # Unit and integration tests
 ├── data/cache/         # Cached API responses
-└── tests/
+└── docker-compose.yml  # 4 database containers
 ```
 
 ## Environment Variables
@@ -123,11 +132,13 @@ Copy `.env.example` to `.env` and fill in the values:
 | `POSTGRES_DB` | PostgreSQL database name | Yes |
 | `MONGO_USER` | MongoDB username | Yes |
 | `MONGO_PASSWORD` | MongoDB password | Yes |
+| `MONGO_HOST` | MongoDB host (default: `127.0.0.1`) | No |
+| `MONGO_PORT` | MongoDB port (default: `27017`) | No |
 | `NEO4J_USER` | Neo4j username | Yes |
 | `NEO4J_PASSWORD` | Neo4j password | Yes |
+| `NEO4J_URI` | Neo4j bolt URI (default: `bolt://127.0.0.1:7687`) | No |
 | `GUARDIAN_API_KEY` | Guardian API key ([get one](https://open-platform.theguardian.com/access/)) | Yes |
 | `FRED_API_KEY` | FRED API key ([get one](https://fred.stlouisfed.org/docs/api/api_key.html)) | Yes |
+| `CHROMA_HOST` | ChromaDB host (default: `127.0.0.1`) | No |
+| `CHROMA_PORT` | ChromaDB port (default: `8001`) | No |
 | `OLLAMA_HOST` | Ollama server URL (default: `http://localhost:11434`) | No |
-| `ANTHROPIC_API_KEY` | Anthropic API key for Claude | No |
-
-
