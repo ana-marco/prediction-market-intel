@@ -28,7 +28,7 @@ nest-asyncio>=1.6.0
 ollama>=0.1.0
 
 # UI
-streamlit>=1.29.0
+chainlit>=2.10.0
 
 # Development
 pytest>=7.4.0

@@ -1,20 +1,27 @@
 """
-MCP tools for querying prediction market data from PostgreSQL.
+MCP tools for querying prediction market data.
+
+Live API data via PolymarketClient, with PostgreSQL fallback.
 """
+
+import json
+import logging
 
 from fastmcp import FastMCP
 from src.database.postgres import PostgresClient
+from src.ingestion.polymarket import PolymarketClient
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_yes_probability(market: dict) -> str:
-    """Extract Yes probability from outcome_prices JSONB.
+    """Extract Yes probability from outcome prices.
 
-    outcome_prices may be a list or a JSON-encoded string like
-    '["0.0575", "0.9425"]'. Index 0 is the Yes price.
+    Handles both DB rows (outcome_prices, snake_case) and raw API
+    responses (outcomePrices, camelCase). Values may be a list or
+    a JSON-encoded string like '["0.0575", "0.9425"]'.
     """
-    import json
-
-    prices = market.get("outcome_prices")
+    prices = market.get("outcome_prices") or market.get("outcomePrices")
     if isinstance(prices, str):
         try:
             prices = json.loads(prices)
@@ -28,12 +35,29 @@ def _parse_yes_probability(market: dict) -> str:
     return "N/A"
 
 
+def _format_market(m: dict) -> dict:
+    """Format a market dict (from API or DB) into the tool response schema."""
+    vol = m.get("volume24hr") or m.get("volume_24h")
+    return {
+        "question": m.get("question"),
+        "yes_probability": _parse_yes_probability(m),
+        "volume_24h": (
+            f"${float(vol):,.0f}" if vol else "N/A"
+        ),
+        "category": m.get("category") or "Unknown",
+        "url": (
+            m.get("source_url")
+            or f"https://polymarket.com/event/{m.get('slug', '')}"
+        ),
+    }
+
+
 def register_market_tools(mcp: FastMCP):
     """Register market-related tools with the MCP server."""
 
     @mcp.tool()
     def search_markets(query: str, limit: int = 5) -> dict:
-        """Search prediction markets by keyword.
+        """Search prediction markets by keyword using live Polymarket data.
 
         Args:
             query: Search term (e.g., "Iran", "Fed", "Bitcoin")
@@ -42,30 +66,18 @@ def register_market_tools(mcp: FastMCP):
         Returns:
             Dict with markets list and source metadata
         """
+        # PostgreSQL full-text search is more reliable than
+        # Polymarket's search API for keyword matching
         try:
             db = PostgresClient()
             markets = db.search_markets(query, limit=limit)
-
-            formatted = []
-            for m in markets:
-                formatted.append({
-                    "question": m.get("question"),
-                    "yes_probability": _parse_yes_probability(m),
-                    "volume_24h": (
-                        f"${float(m.get('volume_24h', 0)):,.0f}"
-                        if m.get("volume_24h") else "N/A"
-                    ),
-                    "category": m.get("category") or "Unknown",
-                    "url": m.get("source_url"),
-                })
-
+            formatted = [_format_market(m) for m in markets]
             return {
                 "markets": formatted,
                 "count": len(formatted),
                 "source": "polymarket",
                 "source_type": "prediction_market",
             }
-
         except Exception as e:
             return {"error": str(e), "markets": []}
 
@@ -73,7 +85,7 @@ def register_market_tools(mcp: FastMCP):
     def get_top_markets(
         category: str = None, limit: int = 10
     ) -> dict:
-        """Get top prediction markets by trading volume.
+        """Get top prediction markets by trading volume from live Polymarket data.
 
         Args:
             category: Optional category filter
@@ -82,31 +94,43 @@ def register_market_tools(mcp: FastMCP):
         Returns:
             Dict with markets list and source metadata
         """
+        # Try live API first
+        try:
+            client = PolymarketClient(use_cache=False)
+            markets = client.get_markets(
+                limit=limit, active=True,
+                order="volume24hr", ascending=False,
+            )
+            if category:
+                markets = [
+                    m for m in markets
+                    if category.lower() in (
+                        m.get("category", "") or ""
+                    ).lower()
+                ]
+            if markets:
+                formatted = [_format_market(m) for m in markets]
+                return {
+                    "markets": formatted,
+                    "count": len(formatted),
+                    "source": "polymarket",
+                    "source_type": "prediction_market",
+                }
+        except Exception as e:
+            logger.warning(f"Live Polymarket fetch failed: {e}")
+
+        # Fall back to PostgreSQL
         try:
             db = PostgresClient()
             markets = db.get_markets(
                 category=category, limit=limit
             )
-
-            formatted = []
-            for m in markets:
-                formatted.append({
-                    "question": m.get("question"),
-                    "yes_probability": _parse_yes_probability(m),
-                    "volume_24h": (
-                        f"${float(m.get('volume_24h', 0)):,.0f}"
-                        if m.get("volume_24h") else "N/A"
-                    ),
-                    "category": m.get("category") or "Unknown",
-                    "url": m.get("source_url"),
-                })
-
+            formatted = [_format_market(m) for m in markets]
             return {
                 "markets": formatted,
                 "count": len(formatted),
                 "source": "polymarket",
                 "source_type": "prediction_market",
             }
-
         except Exception as e:
             return {"error": str(e), "markets": []}
