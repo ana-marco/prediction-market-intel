@@ -95,7 +95,6 @@ def register_graph_tools(mcp: FastMCP):
                 RETURN m.id as id
                 LIMIT 1
                 """
-                neo4j.connect()
                 with neo4j.driver.session() as session:
                     result = session.run(
                         query, {"text": market_question}

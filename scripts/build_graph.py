@@ -18,7 +18,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.database.postgres import PostgresClient
-from src.database.mongo import MongoDBClient
 from src.database.neo4j_db import Neo4jClient, extract_topics_from_text
 
 logging.basicConfig(

@@ -9,11 +9,8 @@ Uses sentence-transformers for local embeddings (no API key needed).
 
 import os
 import logging
-from datetime import datetime
-from typing import Optional
 
 import chromadb
-from chromadb.config import Settings
 from dotenv import load_dotenv
 
 load_dotenv()

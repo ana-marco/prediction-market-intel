@@ -46,7 +46,6 @@ class PostgresClient:
             "user": user or os.getenv("POSTGRES_USER", "pmi"),
             "password": password or os.getenv("POSTGRES_PASSWORD", "pmi_dev_password"),
         }
-        self._conn = None
     
     @contextmanager
     def get_connection(self):
