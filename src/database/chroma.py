@@ -23,29 +23,28 @@ logger = logging.getLogger(__name__)
 class ChromaClient:
     """Client for ChromaDB vector database."""
     
-    def __init__(self, persist_dir: str = None):
+    def __init__(self):
+        """Initialize ChromaDB client.
+
+        Connects to the Docker ChromaDB server via HTTP.
+        Host and port configurable via CHROMA_HOST and CHROMA_PORT env vars.
         """
-        Initialize ChromaDB client.
-        
-        Args:
-            persist_dir: Directory to persist data (default: ./data/chroma)
-        """
-        self.persist_dir = persist_dir or os.getenv(
-            "CHROMA_PERSIST_DIR", 
-            "./data/chroma"
-        )
+        self.host = os.getenv("CHROMA_HOST", "127.0.0.1")
+        self.port = int(os.getenv("CHROMA_PORT", "8001"))
         self.client = None
-        
+
         # Collection names
         self.MARKETS_COLLECTION = "markets"
         self.ARTICLES_COLLECTION = "articles"
         self.REDDIT_COLLECTION = "reddit"
-    
+
     def connect(self):
-        """Initialize ChromaDB client with persistence."""
+        """Connect to ChromaDB Docker container via HTTP."""
         if self.client is None:
-            self.client = chromadb.PersistentClient(path=self.persist_dir)
-            logger.info(f"Connected to ChromaDB at {self.persist_dir}")
+            self.client = chromadb.HttpClient(
+                host=self.host, port=self.port,
+            )
+            logger.info(f"Connected to ChromaDB at {self.host}:{self.port}")
     
     def __enter__(self):
         self.connect()

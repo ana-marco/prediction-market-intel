@@ -57,7 +57,7 @@ services:
     image: chromadb/chroma:latest
     container_name: pmi-chromadb
     ports:
-      - "8000:8000"
+      - "8001:8000"  # 8000 reserved for Chainlit UI
     volumes:
       - chroma_data:/chroma/chroma
     environment:
