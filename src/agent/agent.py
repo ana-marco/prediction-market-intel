@@ -224,7 +224,15 @@ def run_agent_query(query: str) -> AgentResponse:
     a structured response with source attribution.
     """
     try:
-        response = asyncio.run(_run_agent_async(query))
+        # Use a fresh event loop to avoid conflicts when called
+        # from another async context (e.g., Chainlit's event loop)
+        loop = asyncio.new_event_loop()
+        try:
+            response = loop.run_until_complete(
+                _run_agent_async(query)
+            )
+        finally:
+            loop.close()
         _log_to_postgres(query, response)
         return response
     except Exception as e:
