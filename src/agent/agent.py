@@ -194,6 +194,7 @@ async def _run_agent_async(query: str) -> AgentResponse:
         model=MODEL_NAME,
         temperature=0,
         num_predict=1024,
+        base_url=os.getenv("OLLAMA_HOST", "http://localhost:11434"),
     )
 
     agent = create_agent(llm, tools, system_prompt=SYSTEM_PROMPT)
