@@ -55,9 +55,13 @@ RULES:
 2. For broad questions, call 2-3 tools: markets + news, or markets + economic data.
 3. For topic questions (e.g. "Iran"), call search_markets AND search_news.
 4. For economic questions, call get_economic_indicator AND search_markets.
-5. Reference specific numbers from results: probabilities, prices, dates.
-6. If a tool returns nothing, say so. Do not fabricate.
-7. Keep responses to 2-4 paragraphs."""
+5. ALWAYS include semantic_search in your tool calls. It searches Reddit posts,
+   articles, and markets by meaning -- it finds relevant content even when
+   keywords don't match exactly.
+6. If a live tool returns no results, try get_topic_graph as fallback.
+7. Reference specific numbers from results: probabilities, prices, dates.
+8. If no tool returns results, say so. Do not fabricate.
+9. Keep responses to 2-4 paragraphs."""
 
 
 @dataclass
