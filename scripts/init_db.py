@@ -62,29 +62,10 @@ def init_mongodb() -> bool:
     """Initialize MongoDB collections and indexes."""
     try:
         import pymongo
-        from dotenv import load_dotenv
-        import os
-        
-        load_dotenv()
-        
-        # Use connection string format (more reliable on Windows)
-        user = os.getenv("MONGO_USER", "pmi")
-        password = os.getenv("MONGO_PASSWORD", "pmi_dev_password")
-        client = pymongo.MongoClient(
-            f"mongodb://{user}:{password}@127.0.0.1:27017/?authSource=admin"
-        )
-        
-        db = client["prediction_market_intel"]
-        
-        # Create collections with indexes
-        # Reddit posts
-        posts = db["reddit_posts"]
-        posts.create_index("post_id", unique=True)
-        posts.create_index("subreddit")
-        posts.create_index("created_utc")
-        posts.create_index([("title", "text"), ("selftext", "text")])
-        
-        logger.info("MongoDB collections initialized")
+        from src.database.mongo import MongoDBClient
+
+        mongo = MongoDBClient()
+        mongo.init_collections()
         return True
         
     except Exception as e:
@@ -102,7 +83,7 @@ def init_neo4j() -> bool:
         load_dotenv()
         
         driver = GraphDatabase.driver(
-            "bolt://127.0.0.1:7687",  # Use IP, not localhost (IPv6 issues on Windows)
+            os.getenv("NEO4J_URI", "bolt://127.0.0.1:7687"),
             auth=(
                 os.getenv("NEO4J_USER", "neo4j"),
                 os.getenv("NEO4J_PASSWORD", "pmi_dev_password")
@@ -137,28 +118,14 @@ def init_neo4j() -> bool:
 def init_chromadb() -> bool:
     """Initialize ChromaDB collections."""
     try:
-        import chromadb
-        
-        client = chromadb.HttpClient(host="127.0.0.1", port=8001)
-        
-        # Create collections for different content types
-        collections = [
-            "news_articles",      # Guardian, gov.uk
-            "market_descriptions", # Polymarket
-            "reddit_posts",        # Reddit
-        ]
-        
-        for name in collections:
-            try:
-                client.get_or_create_collection(
-                    name=name,
-                    metadata={"description": f"Embeddings for {name}"}
-                )
-                logger.info(f"ChromaDB collection '{name}' ready")
-            except Exception as e:
-                logger.warning(f"Collection {name}: {e}")
-        
-        logger.info("ChromaDB collections initialized")
+        from src.database.chroma import ChromaClient
+
+        chroma = ChromaClient()
+        chroma.connect()
+        # Collections are created during build_embeddings.py;
+        # here we just verify the connection works
+        chroma.client.heartbeat()
+        logger.info("ChromaDB connection verified")
         return True
         
     except Exception as e:
