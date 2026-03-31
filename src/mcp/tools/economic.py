@@ -43,8 +43,12 @@ def register_economic_tools(mcp: FastMCP):
                 for o in obs:
                     if o.get("value") == ".":
                         continue
+                    try:
+                        val = float(o["value"])
+                    except (ValueError, TypeError):
+                        continue
                     formatted.append({
-                        "value": float(o["value"]),
+                        "value": val,
                         "date": o["date"],
                         "units": data.get("units"),
                     })

@@ -309,7 +309,11 @@ class Neo4jClient:
 
 
 def extract_topics_from_text(text: str) -> list[str]:
-    """Extract topic keywords from text."""
+    """Extract topic keywords from text using substring matching.
+
+    Uses a curated keyword-to-topic mapping (not NLP). Returns
+    canonical topic names for use as Neo4j Topic node identifiers.
+    """
     # Common topics to look for
     topic_keywords = {
         "iran": "iran",

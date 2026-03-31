@@ -44,6 +44,7 @@ class ChromaClient:
             self.client = chromadb.HttpClient(
                 host=self.host, port=self.port,
             )
+            self.client.heartbeat()
             logger.info(f"Connected to ChromaDB at {self.host}:{self.port}")
     
     def __enter__(self):

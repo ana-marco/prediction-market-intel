@@ -87,7 +87,8 @@ def register_graph_tools(mcp: FastMCP):
         """
         try:
             with Neo4jClient() as neo4j:
-                # Find the market by searching question text
+                # LLM passes natural language, not a market ID,
+                # so we match by question text substring
                 query = """
                 MATCH (m:Market)
                 WHERE toLower(m.question) CONTAINS toLower($text)

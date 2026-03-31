@@ -183,6 +183,8 @@ async def _run_agent_async(query: str) -> AgentResponse:
     """Core async function: connect to MCP server, run LangChain agent loop."""
     connection = _get_mcp_connection()
 
+    # session=None because we pass a connection config instead;
+    # load_mcp_tools creates and manages the session internally
     tools = await load_mcp_tools(session=None, connection=connection)
     for t in tools:
         t.handle_tool_error = True

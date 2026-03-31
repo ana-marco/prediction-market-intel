@@ -11,7 +11,6 @@ from fastmcp import FastMCP
 mcp = FastMCP("prediction-market-intel")
 
 
-# Import tools (will be added as we build them)
 from src.mcp.tools.markets import register_market_tools
 from src.mcp.tools.news import register_news_tools
 from src.mcp.tools.economic import register_economic_tools

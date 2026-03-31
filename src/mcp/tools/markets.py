@@ -36,14 +36,20 @@ def _parse_yes_probability(market: dict) -> str:
 
 
 def _format_market(m: dict) -> dict:
-    """Format a market dict (from API or DB) into the tool response schema."""
+    """Format a market dict (from API or DB) into the tool response schema.
+
+    Accepts both live API dicts (camelCase keys like volume24hr, slug)
+    and PostgreSQL row dicts (snake_case keys like volume_24h, source_url).
+    """
     vol = m.get("volume24hr") or m.get("volume_24h")
+    try:
+        vol_str = f"${float(vol):,.0f}" if vol else "N/A"
+    except (ValueError, TypeError):
+        vol_str = "N/A"
     return {
         "question": m.get("question"),
         "yes_probability": _parse_yes_probability(m),
-        "volume_24h": (
-            f"${float(vol):,.0f}" if vol else "N/A"
-        ),
+        "volume_24h": vol_str,
         "category": m.get("category") or "Unknown",
         "url": (
             m.get("source_url")

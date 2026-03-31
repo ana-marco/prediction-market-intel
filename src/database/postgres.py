@@ -235,7 +235,7 @@ class PostgresClient:
         with self.get_cursor() as cursor:
             cursor.execute(sql, params)
             result = cursor.fetchone()
-            article_id = result["id"]
+            article_id = result["id"] if result else None
         
         self._record_lineage("articles", str(article_id), source, article,
                              f"raw API ingest from {source}")
