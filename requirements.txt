@@ -17,10 +17,12 @@ python-dotenv>=1.0.0
 # Embeddings
 sentence-transformers>=2.2.0
 
-# Agent framework (uncomment one after decision)
-# langchain>=0.1.0
-# langchain-community>=0.0.10
-# openfang>=0.1.0
+# Agent framework
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-ollama>=0.3.0
+langchain-mcp-adapters>=0.2.2
+nest-asyncio>=1.6.0
 
 # LLM
 ollama>=0.1.0
