@@ -106,7 +106,7 @@ def main():
                     db.insert_article(article, "guardian")
                     stored += 1
                 except Exception as e:
-                    pass  # Duplicate or error, skip silently
+                    logger.debug(f"Skipping article: {e}")
             
             total += stored
             logger.info(f"  {topic}: {stored} articles stored")

@@ -53,14 +53,14 @@ def main():
     market_count = 0
     
     for market in markets:
-        neo4j.create_market(market)
-        
-        # Extract topics from question
-        topics = extract_topics_from_text(market.get("question", ""))
-        for topic in topics:
-            neo4j.link_market_to_topic(market["id"], topic)
-        
-        market_count += 1
+        try:
+            neo4j.create_market(market)
+            topics = extract_topics_from_text(market.get("question", ""))
+            for topic in topics:
+                neo4j.link_market_to_topic(market["id"], topic)
+            market_count += 1
+        except Exception as e:
+            logger.debug(f"Skipping market {market.get('id')}: {e}")
     
     logger.info(f"  Loaded {market_count} markets")
     
@@ -70,23 +70,22 @@ def main():
     article_count = 0
     
     for article in articles:
-        neo4j.create_article({
-            "id": article.get("external_id") or str(article.get("id")),
-            "title": article.get("title"),
-            "source": article.get("source"),
-            "url": article.get("url"),
-            "published_at": str(article.get("published_at")) if article.get("published_at") else None,
-        })
-        
-        # Extract topics from title and content
-        text = f"{article.get('title', '')} {article.get('content', '')}"
-        topics = extract_topics_from_text(text)
-        
-        article_id = article.get("external_id") or str(article.get("id"))
-        for topic in topics:
-            neo4j.link_article_to_topic(article_id, topic)
-        
-        article_count += 1
+        try:
+            article_id = article.get("external_id") or str(article.get("id"))
+            neo4j.create_article({
+                "id": article_id,
+                "title": article.get("title"),
+                "source": article.get("source"),
+                "url": article.get("url"),
+                "published_at": str(article.get("published_at")) if article.get("published_at") else None,
+            })
+            text = f"{article.get('title', '')} {article.get('content', '')}"
+            topics = extract_topics_from_text(text)
+            for topic in topics:
+                neo4j.link_article_to_topic(article_id, topic)
+            article_count += 1
+        except Exception as e:
+            logger.debug(f"Skipping article {article.get('id')}: {e}")
     
     logger.info(f"  Loaded {article_count} articles")
     

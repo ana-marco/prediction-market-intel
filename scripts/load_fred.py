@@ -77,8 +77,8 @@ def main():
                                 unit=obs.get("units"),
                             )
                             stored += 1
-                        except Exception:
-                            pass  # Duplicate
+                        except Exception as e:
+                            logger.debug(f"Skipping value: {e}")
                 
                 total += stored
                 logger.info(f"  {series_id}: {stored} observations stored")

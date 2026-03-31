@@ -101,7 +101,9 @@ class FREDClient:
             info_response = self.session.get(f"{BASE_URL}/series", params=info_params)
             info_response.raise_for_status()
             series_info = info_response.json().get("seriess", [{}])[0]
-            
+            if not series_info:
+                logger.warning(f"No series metadata returned for {series_id}")
+
             # Get observations
             obs_params = {
                 "api_key": self.api_key,
