@@ -66,8 +66,32 @@ def register_market_tools(mcp: FastMCP):
         Returns:
             Dict with markets list and source metadata
         """
-        # PostgreSQL full-text search is more reliable than
-        # Polymarket's search API for keyword matching
+        # Live API: fetch active markets and filter client-side.
+        # Polymarket's search endpoint is unreliable, so we use
+        # get_markets with keyword filtering instead.
+        try:
+            client = PolymarketClient(use_cache=False)
+            all_markets = client.get_markets(
+                limit=100, active=True,
+                order="volume24hr", ascending=False,
+            )
+            q_lower = query.lower()
+            matches = [
+                m for m in all_markets
+                if q_lower in (m.get("question", "") or "").lower()
+            ][:limit]
+            if matches:
+                formatted = [_format_market(m) for m in matches]
+                return {
+                    "markets": formatted,
+                    "count": len(formatted),
+                    "source": "polymarket",
+                    "source_type": "prediction_market",
+                }
+        except Exception as e:
+            logger.warning(f"Live Polymarket search failed: {e}")
+
+        # Fall back to PostgreSQL full-text search
         try:
             db = PostgresClient()
             markets = db.search_markets(query, limit=limit)
