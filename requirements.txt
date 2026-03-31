@@ -32,4 +32,5 @@ chainlit>=2.10.0
 
 # Development
 pytest>=7.4.0
+pytest-cov>=4.1.0
 black>=23.12.0
