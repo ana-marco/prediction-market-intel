@@ -47,6 +47,8 @@ LIVE DATA TOOLS:
 HISTORICAL/SEMANTIC TOOLS:
 - semantic_search(query): Find related content by meaning across all stored data
 - find_related_content(topic): Cross-source context on a topic
+- get_topic_graph(topic): Graph relationships linking markets, news, and indicators for a topic
+- get_market_context(market_question): Deep context for a specific market via graph
 
 RULES:
 1. ALWAYS call tools before answering. Never invent data.
