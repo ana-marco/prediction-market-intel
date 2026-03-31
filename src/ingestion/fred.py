@@ -10,7 +10,9 @@ Key indicators for prediction markets:
 - UNRATE: Unemployment rate
 - DCOILWTICO: WTI crude oil price
 - DGS10: 10-year Treasury rate
-- SP500: S&P 500 index
+- VIXCLS: VIX volatility index
+- DTWEXBGS: Trade Weighted US Dollar Index
+- T10Y2Y: Yield curve (10Y minus 2Y)
 """
 
 import os

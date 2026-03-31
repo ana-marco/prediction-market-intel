@@ -139,7 +139,7 @@ def init_chromadb() -> bool:
     try:
         import chromadb
         
-        client = chromadb.HttpClient(host="127.0.0.1", port=8000)  # Use IP, not localhost
+        client = chromadb.HttpClient(host="127.0.0.1", port=8001)
         
         # Create collections for different content types
         collections = [

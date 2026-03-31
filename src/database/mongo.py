@@ -38,7 +38,6 @@ class MongoDBClient:
         if self.client is None:
             self.client = MongoClient(self.uri)
             self.db = self.client[self.database]
-            # Test connection
             self.client.server_info()
             logger.info(f"Connected to MongoDB at {self.host}:{self.port}")
     

@@ -41,6 +41,7 @@ INDICATOR_TOPICS = {
 
 
 def main():
+    """Build Neo4j graph: load markets, articles, indicators, link via topics."""
     pg = PostgresClient()
     neo4j = Neo4jClient()
     

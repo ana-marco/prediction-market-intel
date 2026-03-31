@@ -143,8 +143,9 @@ class GovUKScraper:
                 time_elem = item.select_one("time")
                 published_at = time_elem.get("datetime") if time_elem else None
                 
-                # Document type from metadata
-                doc_type = "news"  # Default
+                # gov.uk HTML doesn't expose document type reliably,
+                # so we default to "news" for all press releases
+                doc_type = "news"
                 
                 articles.append({
                     "title": title,

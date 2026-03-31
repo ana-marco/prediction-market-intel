@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    """Build ChromaDB vector embeddings from PostgreSQL and MongoDB data."""
     pg = PostgresClient()
     chroma = ChromaClient()
     

@@ -113,7 +113,7 @@ class PostgresClient:
             RETURNING id
         """
         
-        # Normalize the data
+        # Map camelCase API fields to snake_case DB columns
         params = {
             "id": market.get("id") or market.get("condition_id"),
             "question": market.get("question"),
@@ -136,7 +136,6 @@ class PostgresClient:
             result = cursor.fetchone()
             market_id = result["id"] if result else params["id"]
         
-        # Track lineage
         self._record_lineage("markets", market_id, "polymarket", market,
                              "raw API ingest from Polymarket CLOB endpoint")
         
@@ -372,7 +371,7 @@ class PostgresClient:
             ON CONFLICT (table_name, record_id, fetched_at) DO NOTHING
         """
 
-        # Compute checksum of raw data
+        # sort_keys ensures identical data always produces the same checksum
         checksum = hashlib.sha256(
             json.dumps(raw_data, sort_keys=True).encode()
         ).hexdigest()

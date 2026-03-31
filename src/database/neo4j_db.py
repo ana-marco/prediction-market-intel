@@ -67,7 +67,6 @@ class Neo4jClient:
         self.connect()
         
         with self.driver.session() as session:
-            # Create constraints for unique IDs
             constraints = [
                 "CREATE CONSTRAINT market_id IF NOT EXISTS FOR (m:Market) REQUIRE m.id IS UNIQUE",
                 "CREATE CONSTRAINT article_id IF NOT EXISTS FOR (a:Article) REQUIRE a.id IS UNIQUE",
@@ -81,7 +80,6 @@ class Neo4jClient:
                 except Exception as e:
                     logger.debug(f"Constraint may already exist: {e}")
             
-            # Create indexes for search
             indexes = [
                 "CREATE INDEX market_question IF NOT EXISTS FOR (m:Market) ON (m.question)",
                 "CREATE INDEX article_title IF NOT EXISTS FOR (a:Article) ON (a.title)",

@@ -4,11 +4,12 @@ Reddit Client
 Fetches posts from Reddit using the public .json endpoint.
 No authentication required - just append .json to any Reddit URL.
 
-Target subreddits for prediction market sentiment:
-- r/wallstreetbets - market sentiment, trading discussions
-- r/economics - economic analysis
-- r/worldnews - geopolitical events
-- r/polymarket - prediction market discussions (small)
+Target subreddits (curated for signal quality over volume):
+- r/polymarket - prediction market discussions
+- r/geopolitics - in-depth geopolitical analysis
+- r/CredibleDefense - military/defense analysis, evidence-based
+- r/NeutralPolitics - fact-based political discussion
+- r/economics - economic analysis (Fed, inflation)
 """
 
 import os
