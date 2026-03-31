@@ -90,6 +90,8 @@ class PostgresClient:
     
     def upsert_market(self, market: dict) -> str:
         """Insert or update a market record."""
+        if not market.get("id") or not market.get("question"):
+            raise ValueError("Market missing required fields: id, question")
         sql = """
             INSERT INTO markets (
                 id, question, description, outcome_prices, outcomes,
@@ -201,6 +203,9 @@ class PostgresClient:
     
     def insert_article(self, article: dict, source: str) -> int:
         """Insert a news article. Returns article ID."""
+        title = article.get("title") or article.get("webTitle")
+        if not title or not source:
+            raise ValueError("Article missing required fields: title, source")
         sql = """
             INSERT INTO articles (
                 source, external_id, title, content, summary,
@@ -299,6 +304,8 @@ class PostgresClient:
         frequency: str = None,
     ) -> int:
         """Insert an economic indicator data point."""
+        if not series_id or not date:
+            raise ValueError("Indicator missing required fields: series_id, date")
         sql = """
             INSERT INTO economic_indicators (
                 series_id, name, value, date, unit, frequency
