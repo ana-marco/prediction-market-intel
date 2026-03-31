@@ -13,10 +13,15 @@ from pathlib import Path
 # when running: chainlit run src/ui/app.py
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
 import chainlit as cl
 
 from src.agent.agent import AgentResponse, run_agent_query
 from src.database.postgres import PostgresClient
+
+_executor = ThreadPoolExecutor(max_workers=1)
 
 DEMO_QUERIES = [
     "What are the biggest risks prediction markets are pricing right now?",
@@ -122,44 +127,26 @@ async def start():
 @cl.on_message
 async def on_message(message: cl.Message):
     """Handle user query: run agent, display response + sources."""
+    msg = cl.Message(content="")
+    await msg.send()
 
-    # Show thinking step while agent works
-    async with cl.Step(name="Agent Processing", type="tool") as step:
-        step.input = message.content
-        response = await cl.make_async(run_agent_query)(message.content)
-        step.output = (
-            f"Tools: {', '.join(response.tools_used) or 'none'} | "
-            f"Latency: {response.latency_ms / 1000:.1f}s | "
-            f"Success: {response.success}"
+    # Run agent in a thread to avoid async conflicts
+    try:
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            _executor, run_agent_query, message.content
         )
-
-    if not response.success:
-        await cl.Message(
-            content=f"**Error:** {response.error}"
-        ).send()
+    except Exception as e:
+        msg.content = f"**Execution error:** `{type(e).__name__}: {e}`"
+        await msg.update()
         return
 
-    # Show tool calls as individual steps for visibility
-    if response.tools_used:
-        for tool_name in response.tools_used:
-            async with cl.Step(
-                name=tool_name, type="tool"
-            ) as tool_step:
-                tool_step.output = "Called via MCP stdio"
+    if not response.success:
+        msg.content = f"**Error:** {response.error}"
+        await msg.update()
+        return
 
-    # Build sources element (displayed alongside response)
-    sources_md = format_sources(response.sources)
-    sources_element = cl.Text(
-        name="Verified Sources",
-        content=(
-            "*These sources come from tool results, not the LLM. "
-            "Compare against the response to check for hallucinations.*"
-            f"\n\n{sources_md}"
-        ),
-        display="side",
-    )
-
-    # Send the main response with sources attached
+    # Build response with metadata
     tools_str = (
         ", ".join(response.tools_used)
         if response.tools_used
@@ -167,17 +154,15 @@ async def on_message(message: cl.Message):
     )
     latency = f"{response.latency_ms / 1000:.1f}s"
 
-    await cl.Message(
-        content=(
-            f"{response.response}\n\n"
-            f"---\n"
-            f"*Tools: {tools_str} | Latency: {latency}*"
-        ),
-        elements=[sources_element],
-    ).send()
+    # Sources section (hallucination checking: from tools, not LLM)
+    sources_md = format_sources(response.sources)
 
-    # Show agent logs in a follow-up collapsible step
-    async with cl.Step(
-        name="Agent Logs", type="tool"
-    ) as logs_step:
-        logs_step.output = format_agent_logs()
+    msg.content = (
+        f"{response.response}\n\n"
+        f"---\n"
+        f"**Tools used:** {tools_str} | **Latency:** {latency}\n\n"
+        f"### Verified Sources\n"
+        f"*These sources were retrieved directly from data queries.*\n\n"
+        f"{sources_md}"
+    )
+    await msg.update()
