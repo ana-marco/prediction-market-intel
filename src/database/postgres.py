@@ -142,7 +142,10 @@ class PostgresClient:
             market_id = result["id"] if result else params["id"]
         
         self._record_lineage("markets", market_id, "polymarket", market,
-                             "raw API ingest from Polymarket CLOB endpoint")
+                             "camelCase to snake_case field mapping, "
+                             "outcomePrices JSON string to JSONB, "
+                             "active/closed boolean to status string, "
+                             "slug to source_url construction")
         
         return market_id
     
@@ -245,7 +248,10 @@ class PostgresClient:
             article_id = result["id"] if result else None
         
         self._record_lineage("articles", str(article_id), source, article,
-                             f"raw API ingest from {source}")
+                             f"field normalisation from {source}: "
+                             "nested fields flattened (headline/webTitle to title, "
+                             "body/standfirst to content/summary), "
+                             "HTML extracted for govuk source")
         return article_id
     
     def get_articles(
@@ -328,7 +334,9 @@ class PostgresClient:
             "economic_indicators", str(indicator_id), "fred",
             {"series_id": series_id, "name": name, "value": str(value),
              "date": str(date), "unit": unit, "frequency": frequency},
-            "raw API ingest from FRED"
+            "two API calls merged (series metadata + observations), "
+            "missing value marker '.' converted to None, "
+            "string values cast to float"
         )
         return indicator_id
     
