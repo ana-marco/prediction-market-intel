@@ -15,7 +15,6 @@ Graph structure:
 """
 
 import os
-import re
 import logging
 from datetime import datetime
 from typing import Optional
@@ -34,7 +33,11 @@ class Neo4jClient:
         """Initialize Neo4j connection."""
         self.uri = os.getenv("NEO4J_URI", "bolt://127.0.0.1:7687")
         self.user = os.getenv("NEO4J_USER", "neo4j")
-        self.password = os.getenv("NEO4J_PASSWORD", "pmi_dev_password")
+        self.password = os.getenv("NEO4J_PASSWORD")
+        if not self.password:
+            raise ValueError(
+                "NEO4J_PASSWORD not set. Copy .env.example to .env and fill in credentials."
+            )
         self.driver = None
     
     def connect(self):
@@ -47,7 +50,8 @@ class Neo4jClient:
             # Test connection
             with self.driver.session() as session:
                 session.run("RETURN 1")
-            logger.info(f"Connected to Neo4j at {self.uri}")
+            safe_uri = self.uri.split("@")[-1] if "@" in self.uri else self.uri
+            logger.info(f"Connected to Neo4j at {safe_uri}")
     
     def close(self):
         """Close Neo4j connection."""

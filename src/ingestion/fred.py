@@ -254,7 +254,7 @@ class FREDClient:
             
             return cached["data"]
             
-        except (json.JSONDecodeError, KeyError) as e:
+        except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.warning(f"Invalid cache file {path}: {e}")
             return None
     

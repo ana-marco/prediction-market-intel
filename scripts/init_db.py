@@ -61,8 +61,7 @@ def init_postgres() -> bool:
 def init_mongodb() -> bool:
     """Initialize MongoDB collections and indexes."""
     try:
-        import pymongo
-        from src.database.mongo import MongoDBClient
+        from database.mongo import MongoDBClient
 
         mongo = MongoDBClient()
         mongo.init_collections()
@@ -81,13 +80,16 @@ def init_neo4j() -> bool:
         import os
         
         load_dotenv()
-        
+
+        neo4j_password = os.getenv("NEO4J_PASSWORD")
+        if not neo4j_password:
+            raise ValueError(
+                "NEO4J_PASSWORD not set. Copy .env.example to .env and fill in credentials."
+            )
+
         driver = GraphDatabase.driver(
             os.getenv("NEO4J_URI", "bolt://127.0.0.1:7687"),
-            auth=(
-                os.getenv("NEO4J_USER", "neo4j"),
-                os.getenv("NEO4J_PASSWORD", "pmi_dev_password")
-            )
+            auth=(os.getenv("NEO4J_USER", "neo4j"), neo4j_password)
         )
         
         with driver.session() as session:
@@ -118,7 +120,7 @@ def init_neo4j() -> bool:
 def init_chromadb() -> bool:
     """Initialize ChromaDB collections."""
     try:
-        from src.database.chroma import ChromaClient
+        from database.chroma import ChromaClient
 
         chroma = ChromaClient()
         chroma.connect()

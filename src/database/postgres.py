@@ -33,19 +33,23 @@ class PostgresClient:
     
     def __init__(
         self,
-        host: str = "127.0.0.1",  # Use IP, not localhost (IPv6 issues on Windows)
-        port: int = 5432,
+        host: str = None,
+        port: int = None,
         database: str = None,
         user: str = None,
         password: str = None,
     ):
         self.config = {
-            "host": host,
-            "port": port,
+            "host": host or os.getenv("POSTGRES_HOST", "127.0.0.1"),
+            "port": port or int(os.getenv("POSTGRES_PORT", "5432")),
             "database": database or os.getenv("POSTGRES_DB", "prediction_market_intel"),
             "user": user or os.getenv("POSTGRES_USER", "pmi"),
-            "password": password or os.getenv("POSTGRES_PASSWORD", "pmi_dev_password"),
+            "password": password or os.getenv("POSTGRES_PASSWORD"),
         }
+        if not self.config["password"]:
+            raise ValueError(
+                "POSTGRES_PASSWORD not set. Copy .env.example to .env and fill in credentials."
+            )
     
     @contextmanager
     def get_connection(self):

@@ -26,8 +26,12 @@ class MongoDBClient:
         self.host = os.getenv("MONGO_HOST", "127.0.0.1")
         self.port = int(os.getenv("MONGO_PORT", 27017))
         self.user = os.getenv("MONGO_USER", "pmi")
-        self.password = os.getenv("MONGO_PASSWORD", "pmi_dev_password")
+        self.password = os.getenv("MONGO_PASSWORD")
         self.database = os.getenv("MONGO_DATABASE", "prediction_market_intel")
+        if not self.password:
+            raise ValueError(
+                "MONGO_PASSWORD not set. Copy .env.example to .env and fill in credentials."
+            )
         
         self.uri = f"mongodb://{self.user}:{self.password}@{self.host}:{self.port}/?authSource=admin"
         self.client = None

@@ -11,84 +11,21 @@ Usage:
 """
 
 import sys
-import re
 import argparse
 import logging
 from pathlib import Path
-from collections import Counter
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.ingestion.govuk_scraper import GovUKScraper
 from src.database.postgres import PostgresClient
+from src.utils.topic_extraction import extract_topics_from_markets
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-
-def extract_topics_from_markets(db: PostgresClient, max_topics: int = 10) -> list[str]:
-    """Extract search topics from loaded market questions."""
-    
-    markets = db.get_markets(limit=200)
-    
-    if not markets:
-        logger.warning("No markets found. Using fallback topics.")
-        return ["foreign policy", "defence", "trade", "economy", "energy"]
-    
-    # Words to ignore
-    stopwords = {
-        "will", "the", "by", "in", "of", "to", "a", "an", "be", "is", "it",
-        "for", "on", "at", "or", "and", "this", "that", "with", "as", "from",
-        "before", "after", "during", "march", "april", "may", "june", "july",
-        "2024", "2025", "2026", "2027", "2028", "yes", "no", "win", "lose",
-        "happen", "end", "start", "over", "under", "more", "less", "than",
-        "cup", "world", "fifa", "election", "president"  # Too US-specific for UK gov
-    }
-    
-    # Extract meaningful words
-    word_counts = Counter()
-    
-    for market in markets:
-        question = market.get("question", "")
-        words = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', question)
-        for word in words:
-            if word.lower() not in stopwords and len(word) > 2:
-                word_counts[word] += 1
-    
-    # Map to UK-relevant search terms
-    topic_mapping = {
-        "Iran": "Iran",
-        "China": "China trade",
-        "Trump": "US relations",
-        "NATO": "NATO defence",
-        "Oil": "energy policy",
-        "Bitcoin": "cryptocurrency",
-        "Fed": "interest rates",
-        "Trade": "trade policy",
-    }
-    
-    topics = []
-    for word, count in word_counts.most_common(20):
-        if word in topic_mapping:
-            topics.append(topic_mapping[word])
-        elif count >= 2:  # Appears in multiple markets
-            topics.append(word)
-        
-        if len(topics) >= max_topics:
-            break
-    
-    # Always include some core UK policy areas
-    core_topics = ["foreign policy", "defence", "economy"]
-    for t in core_topics:
-        if t not in topics and len(topics) < max_topics:
-            topics.append(t)
-    
-    logger.info(f"Extracted {len(topics)} topics for gov.uk search")
-    
-    return topics
 
 
 def main():
@@ -104,7 +41,7 @@ def main():
     if args.topics:
         topics = [t.strip() for t in args.topics.split(",")]
     else:
-        topics = extract_topics_from_markets(db)
+        topics = extract_topics_from_markets(db, source="govuk")
     
     logger.info(f"Scraping gov.uk for {len(topics)} topics: {topics}")
     

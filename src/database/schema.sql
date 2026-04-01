@@ -115,10 +115,8 @@ CREATE TABLE IF NOT EXISTS agent_logs (
     timestamp TIMESTAMPTZ DEFAULT NOW(),
     query TEXT NOT NULL,                 -- user's question
     tools_called JSONB,                  -- ["polymarket", "guardian", "fred"]
-    context_retrieved JSONB,             -- summary of data retrieved
     response TEXT,                       -- agent's answer
     sources_cited JSONB,                 -- sources used in response
-    reasoning TEXT,                      -- chain of thought / explanation
     latency_ms INTEGER,                  -- response time
     success BOOLEAN DEFAULT TRUE,
     error_message TEXT

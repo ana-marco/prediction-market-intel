@@ -11,13 +11,18 @@ Usage:
 """
 
 import argparse
+import platform
 import subprocess
 import sys
 import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent
-PYTHON = str(PROJECT_ROOT / "venv" / "Scripts" / "python.exe")
+
+if platform.system() == "Windows":
+    PYTHON = str(PROJECT_ROOT / "venv" / "Scripts" / "python.exe")
+else:
+    PYTHON = str(PROJECT_ROOT / "venv" / "bin" / "python")
 
 CONTAINERS = ["pmi-postgres", "pmi-mongodb", "pmi-neo4j", "pmi-chromadb"]
 

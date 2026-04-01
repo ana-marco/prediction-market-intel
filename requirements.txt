@@ -1,37 +1,37 @@
 # Data collection
-requests>=2.31.0
-beautifulsoup4>=4.12.0
+requests>=2.31.0,<3.0.0
+beautifulsoup4>=4.12.0,<5.0.0
 
 # Databases
-psycopg2-binary>=2.9.9
-pymongo>=4.6.0
-neo4j>=5.14.0
-chromadb>=0.4.22
+psycopg2-binary>=2.9.9,<3.0.0
+pymongo>=4.6.0,<5.0.0
+neo4j>=5.14.0,<7.0.0
+chromadb>=0.4.22,<2.0.0
 
 # Data processing
-python-dotenv>=1.0.0
+python-dotenv>=1.0.0,<2.0.0
 
 # Embeddings (used by ChromaDB's default embedding function)
-sentence-transformers>=2.2.0
+sentence-transformers>=2.2.0,<6.0.0
 
 # MCP server
-fastmcp>=3.0.0
+fastmcp>=3.0.0,<4.0.0
 
 # Agent framework
-langchain>=1.0.0
-langchain-core>=1.0.0
-langchain-community>=0.4.0
-langchain-ollama>=0.3.0
-langchain-mcp-adapters>=0.2.2
-nest-asyncio>=1.6.0
+langchain>=1.0.0,<2.0.0
+langchain-core>=1.0.0,<2.0.0
+langchain-community>=0.4.0,<1.0.0
+langchain-ollama>=0.3.0,<2.0.0
+langchain-mcp-adapters>=0.2.2,<1.0.0
+nest-asyncio>=1.6.0,<2.0.0
 
 # LLM
-ollama>=0.1.0
+ollama>=0.1.0,<1.0.0
 
 # UI
-chainlit>=2.10.0
+chainlit>=2.10.0,<3.0.0
 
 # Development
-pytest>=7.4.0
-pytest-cov>=4.1.0
-black>=23.12.0
+pytest>=7.4.0,<10.0.0
+pytest-cov>=4.1.0,<8.0.0
+black>=23.12.0,<27.0.0

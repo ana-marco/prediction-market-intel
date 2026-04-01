@@ -62,6 +62,11 @@ services:
       - chroma_data:/chroma/chroma
     environment:
       ANONYMIZED_TELEMETRY: "false"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/heartbeat')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
