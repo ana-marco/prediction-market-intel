@@ -22,7 +22,42 @@ An AI agent that monitors prediction markets (Polymarket), combines them with ne
 - **MCP Server:** FastMCP with stdio transport
 - **UI:** Chainlit
 
-## Setup
+## Prerequisites
+
+- Python 3.10+
+- Docker and Docker Compose
+- [Ollama](https://ollama.ai) (local LLM runtime)
+- Free API keys: [Guardian](https://open-platform.theguardian.com/access/) and [FRED](https://fred.stlouisfed.org/docs/api/api_key.html)
+
+## Quick Start (Makefile)
+
+The fastest way to get running. Requires `make` (available via Git Bash on Windows).
+
+```bash
+# 1. Clone and configure
+git clone <your-repo-url>
+cd prediction-market-intel
+cp .env.example .env
+# Edit .env: add your GUARDIAN_API_KEY and FRED_API_KEY
+
+# 2. Install dependencies and pull LLM model
+make install
+
+# 3. Load everything: databases, data, graph, embeddings
+make setup
+
+# 4. Start Ollama (in a separate terminal)
+ollama serve
+
+# 5. Run the agent
+make run
+```
+
+Run `make help` to see all available targets.
+
+## Manual Setup (step by step)
+
+If `make` is not available, follow these steps.
 
 ### 1. Clone and configure
 
@@ -30,16 +65,10 @@ An AI agent that monitors prediction markets (Polymarket), combines them with ne
 git clone <your-repo-url>
 cd prediction-market-intel
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env: add your GUARDIAN_API_KEY and FRED_API_KEY
 ```
 
-### 2. Start databases
-
-```bash
-docker-compose up -d
-```
-
-### 3. Install dependencies
+### 2. Create virtual environment and install dependencies
 
 ```bash
 python -m venv venv
@@ -47,21 +76,30 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 4. Install Ollama model
+### 3. Pull the Ollama model
 
 ```bash
 ollama pull qwen2.5:7b
 ```
 
-### 5. Initialize databases
+### 4. Start databases
+
+```bash
+docker compose up -d
+```
+
+### 5. Initialize databases and load data
+
+```bash
+python scripts/run_pipeline.py
+```
+
+This runs all 8 pipeline steps in order: schema init, data loading (5 sources), graph build, and embeddings. It checks Docker containers are running before starting and stops on first failure.
+
+Alternatively, run each step individually:
 
 ```bash
 python scripts/init_db.py
-```
-
-### 6. Load data
-
-```bash
 python scripts/load_polymarket.py
 python scripts/load_guardian.py
 python scripts/load_govuk.py
@@ -71,16 +109,22 @@ python scripts/build_graph.py
 python scripts/build_embeddings.py
 ```
 
-### 7. Run the agent
+### 6. Start Ollama and run the agent
 
 ```bash
+# In a separate terminal:
+ollama serve
+
+# Then run:
 chainlit run src/ui/app.py
 ```
 
-### 8. Run tests
+### 7. Run tests
 
 ```bash
-pytest tests/ -v
+make test
+# Or without make:
+PYTHONPATH=. python -m pytest tests/ -v
 ```
 
 ## Architecture
@@ -114,31 +158,34 @@ prediction-market-intel/
 │   ├── database/       # Storage layer (schema.sql, 4 DB clients)
 │   ├── mcp/            # MCP server and 10 tools
 │   ├── agent/          # LangChain agent
+│   ├── utils/          # Shared utilities (topic extraction)
 │   └── ui/             # Chainlit chat interface
 ├── scripts/            # Data loading and automation
-├── tests/              # Unit and integration tests
+├── tests/              # Unit, integration, and ingestion tests
 ├── data/cache/         # Cached API responses
 └── docker-compose.yml  # 4 database containers
 ```
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and fill in the values:
+Copy `.env.example` to `.env`. Most variables have working defaults for local development. You only need to add your API keys.
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `POSTGRES_USER` | PostgreSQL username | Yes |
-| `POSTGRES_PASSWORD` | PostgreSQL password | Yes |
-| `POSTGRES_DB` | PostgreSQL database name | Yes |
-| `MONGO_USER` | MongoDB username | Yes |
-| `MONGO_PASSWORD` | MongoDB password | Yes |
-| `MONGO_HOST` | MongoDB host (default: `127.0.0.1`) | No |
-| `MONGO_PORT` | MongoDB port (default: `27017`) | No |
-| `NEO4J_USER` | Neo4j username | Yes |
-| `NEO4J_PASSWORD` | Neo4j password | Yes |
-| `NEO4J_URI` | Neo4j bolt URI (default: `bolt://127.0.0.1:7687`) | No |
-| `GUARDIAN_API_KEY` | Guardian API key ([get one](https://open-platform.theguardian.com/access/)) | Yes |
-| `FRED_API_KEY` | FRED API key ([get one](https://fred.stlouisfed.org/docs/api/api_key.html)) | Yes |
-| `CHROMA_HOST` | ChromaDB host (default: `127.0.0.1`) | No |
-| `CHROMA_PORT` | ChromaDB port (default: `8001`) | No |
-| `OLLAMA_HOST` | Ollama server URL (default: `http://localhost:11434`) | No |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `POSTGRES_USER` | PostgreSQL username | `pmi` |
+| `POSTGRES_PASSWORD` | PostgreSQL password | `pmi_dev_password` |
+| `POSTGRES_DB` | PostgreSQL database name | `prediction_market_intel` |
+| `POSTGRES_HOST` | PostgreSQL host | `127.0.0.1` |
+| `POSTGRES_PORT` | PostgreSQL port | `5432` |
+| `MONGO_USER` | MongoDB username | `pmi` |
+| `MONGO_PASSWORD` | MongoDB password | `pmi_dev_password` |
+| `MONGO_HOST` | MongoDB host | `127.0.0.1` |
+| `MONGO_PORT` | MongoDB port | `27017` |
+| `NEO4J_USER` | Neo4j username | `neo4j` |
+| `NEO4J_PASSWORD` | Neo4j password | `pmi_dev_password` |
+| `NEO4J_URI` | Neo4j bolt URI | `bolt://127.0.0.1:7687` |
+| `CHROMA_HOST` | ChromaDB host | `127.0.0.1` |
+| `CHROMA_PORT` | ChromaDB port | `8001` |
+| `OLLAMA_HOST` | Ollama server URL | `http://localhost:11434` |
+| **`GUARDIAN_API_KEY`** | **Guardian API key ([get one](https://open-platform.theguardian.com/access/))** | **None (required)** |
+| **`FRED_API_KEY`** | **FRED API key ([get one](https://fred.stlouisfed.org/docs/api/api_key.html))** | **None (required)** |

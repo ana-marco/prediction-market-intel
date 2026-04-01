@@ -2,7 +2,7 @@
 """
 Initialize all databases for the Prediction Market Intelligence Agent.
 
-Run this after `docker-compose up -d` to set up schemas and collections.
+Run this after `docker compose up -d` to set up schemas and collections.
 
 Usage:
     python scripts/init_db.py
@@ -178,7 +178,7 @@ def main():
         return 0
     else:
         print("Some databases failed to initialize.")
-        print("Make sure Docker containers are running: docker-compose up -d")
+        print("Make sure Docker containers are running: docker compose up -d")
         return 1
 
 
