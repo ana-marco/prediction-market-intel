@@ -35,7 +35,7 @@ The fastest way to get running. Requires `make` (available via Git Bash on Windo
 
 ```bash
 # 1. Clone and configure
-git clone <your-repo-url>
+git clone https://github.com/ana-marco/prediction-market-intel.git
 cd prediction-market-intel
 cp .env.example .env
 # Edit .env: add your GUARDIAN_API_KEY and FRED_API_KEY
@@ -62,7 +62,7 @@ If `make` is not available, follow these steps.
 ### 1. Clone and configure
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/ana-marco/prediction-market-intel.git
 cd prediction-market-intel
 cp .env.example .env
 # Edit .env: add your GUARDIAN_API_KEY and FRED_API_KEY
@@ -130,23 +130,52 @@ PYTHONPATH=. python -m pytest tests/ -v
 ## Architecture
 
 ```
-User Query (Chainlit UI)
-        |
-        v
-Agent (LangChain + qwen2.5 via Ollama)
-        |
-  MCP stdio (JSON-RPC)
-        |
-   +---------+---------+
-   v         v         v
-MCP Tools  MCP Tools  RAG Tools
-(LIVE)     (LIVE)     (HISTORICAL)
-Polymarket  FRED      ChromaDB
-Guardian    |         vectors
-  |         |         |
-  v (fallback)        v
-PostgreSQL           Neo4j
-MongoDB              (graph)
+┌─────────────────────────────────────────────────────────────┐
+│                   User Query (Chainlit UI)                  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│         Retrieval Agent (LangChain + qwen2.5 via Ollama)    │
+│         Decides which tools to call, gathers data           │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                    MCP stdio (JSON-RPC)
+                              │
+        ┌─────────────┬───────┴───────┬─────────────┐
+        ▼             ▼               ▼             ▼
+┌─────────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐
+│ MCP Tools   │ │ MCP Tools │ │ MCP Tools │ │ MCP Tools │
+│ Markets     │ │ News      │ │ Economic  │ │ RAG/Graph │
+│ (LIVE)      │ │ (LIVE)    │ │ (LIVE)    │ │ (STORED)  │
+│ Polymarket  │ │ Guardian  │ │ FRED      │ │ ChromaDB  │
+│  ↓ fallback │ │  ↓ fallbk │ │  ↓ fallbk │ │ Neo4j     │
+│ PostgreSQL  │ │ PostgreSQL│ │ PostgreSQL│ │           │
+└─────────────┘ └───────────┘ └───────────┘ └───────────┘
+        │             │               │             │
+        └─────────────┴───────┬───────┴─────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Fact-Check Agent                       │
+│         Verifies claims against raw tool data               │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   Response to User                          │
+│  - Agent response (from retrieval agent)                    │
+│  - Sources (code-extracted from tool results)               │
+│  - Verification (from fact-check agent)                     │
+└─────────────────────────────────────────────────────────────┘
+
+                        Data Layer
+┌─────────────────────────────────────────────────────────────┐
+│  PostgreSQL: markets, articles, indicators, lineage, logs   │
+│  MongoDB: Reddit posts                                      │
+│  Neo4j: Topic graph (markets <-> topics <-> articles)       │
+│  ChromaDB: Vector embeddings (3,644)                        │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Project Structure
