@@ -64,6 +64,43 @@ RULES:
 9. Keep responses to 2-4 paragraphs."""
 
 
+FACT_CHECK_PROMPT = """You are a fact-checking agent that detects fabricated data and contradictions.
+
+<input>
+You receive a response written by a retrieval agent and the raw data it had access to.
+</input>
+
+<task>
+Check whether the response contains fabricated numbers, invented events, or claims
+that contradict the retrieved data. Only flag actual problems.
+</task>
+
+<rules>
+- ONLY use the provided data as evidence. Never use your own knowledge.
+- Reasonable interpretations and summaries are fine. Do NOT flag them.
+- Only flag: wrong numbers, fabricated data points, or direct contradictions.
+</rules>
+
+<examples>
+DO NOT flag: Response says "tensions are high" when data shows 65% conflict probability.
+This is a reasonable interpretation.
+
+DO flag: Response says "oil is at $95" when data shows $89.33.
+This is a fabricated number.
+</examples>
+
+<output_format>
+If all claims check out:
+VERIFIED — All claims are consistent with the retrieved data.
+CONFIDENCE: HIGH
+
+If there are problems:
+ISSUES FOUND:
+- "[problematic claim]" — CONTRADICTED — [what the data actually says]
+CONFIDENCE: LOW
+</output_format>"""
+
+
 @dataclass
 class AgentResponse:
     """Structured response from the agent, separating content from metadata."""
@@ -71,6 +108,7 @@ class AgentResponse:
     response: str
     sources: list[dict] = field(default_factory=list)
     tools_used: list[str] = field(default_factory=list)
+    fact_check: dict | None = None
     latency_ms: int = 0
     success: bool = True
     error: str | None = None
@@ -153,6 +191,39 @@ def _extract_sources_and_tools(messages: list) -> tuple[list[dict], list[str]]:
     return sources, tools_used
 
 
+async def _fact_check(llm, response_text: str, tool_data: str) -> dict | None:
+    """Fact-checking agent: verify retrieval agent's claims against raw tool data.
+
+    Uses create_agent() with no tools, making it a real LangGraph agent
+    that reasons over the evidence and produces structured verification.
+    """
+    try:
+        verifier = create_agent(llm, tools=[], system_prompt=FACT_CHECK_PROMPT)
+        result = await verifier.ainvoke(
+            {"messages": [HumanMessage(content=(
+                f"RETRIEVAL AGENT RESPONSE:\n{response_text}\n\n"
+                f"RAW TOOL DATA:\n{tool_data}"
+            ))]},
+        )
+
+        content = ""
+        for msg in reversed(result["messages"]):
+            if isinstance(msg, AIMessage) and msg.content:
+                content = msg.content
+                break
+
+        confidence = "MEDIUM"
+        for level in ("HIGH", "LOW", "MEDIUM"):
+            if f"CONFIDENCE: {level}" in content:
+                confidence = level
+                break
+
+        return {"verification": content, "confidence": confidence}
+    except Exception as e:
+        logger.warning(f"Fact-check agent failed: {e}")
+        return None
+
+
 def _log_to_postgres(query: str, response: AgentResponse) -> None:
     """Write agent interaction to the agent_logs table for observability."""
     try:
@@ -204,7 +275,6 @@ async def _run_agent_async(query: str) -> AgentResponse:
         {"messages": [HumanMessage(content=query)]},
         config={"recursion_limit": MAX_ITERATIONS * 2},
     )
-    elapsed_ms = int((time.perf_counter() - start) * 1000)
 
     messages = result["messages"]
 
@@ -217,10 +287,33 @@ async def _run_agent_async(query: str) -> AgentResponse:
 
     sources, tools_used = _extract_sources_and_tools(messages)
 
+    # Collect raw tool data for fact-checker
+    tool_data_parts = []
+    for msg in messages:
+        if isinstance(msg, ToolMessage):
+            raw = msg.content
+            if isinstance(raw, list):
+                text_parts = [
+                    b["text"] for b in raw
+                    if isinstance(b, dict) and b.get("type") == "text"
+                ]
+                raw = text_parts[0] if text_parts else ""
+            tool_data_parts.append(f"[{msg.name}]: {raw}")
+
+    # Second agent: fact-check the response against raw tool data
+    fact_check = None
+    if tool_data_parts and response_text:
+        fact_check = await _fact_check(
+            llm, response_text, "\n\n".join(tool_data_parts)
+        )
+
+    elapsed_ms = int((time.perf_counter() - start) * 1000)
+
     return AgentResponse(
         response=response_text,
         sources=sources,
         tools_used=tools_used,
+        fact_check=fact_check,
         latency_ms=elapsed_ms,
     )
 

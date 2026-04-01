@@ -157,12 +157,31 @@ async def on_message(message: cl.Message):
     # Sources section (hallucination checking: from tools, not LLM)
     sources_md = format_sources(response.sources)
 
+    # Fact-check section (AI-assisted verification by second agent)
+    fact_check_md = ""
+    if response.fact_check:
+        confidence = response.fact_check.get("confidence", "N/A")
+        verification = response.fact_check.get("verification", "")
+
+        if confidence == "HIGH":
+            fact_check_md = (
+                "\n\n*Fact-check: all claims verified against source data.*"
+            )
+        else:
+            fact_check_md = (
+                f"\n\n### AI-Assisted Verification\n"
+                f"**Confidence: {confidence}**\n\n"
+                f"{verification}\n\n"
+                f"*Verified by a separate fact-checking agent "
+                f"against raw tool data.*"
+            )
+
     msg.content = (
         f"{response.response}\n\n"
         f"---\n"
         f"**Tools used:** {tools_str} | **Latency:** {latency}\n\n"
-        f"### Verified Sources\n"
-        f"*These sources were retrieved directly from data queries.*\n\n"
+        f"### Sources\n"
         f"{sources_md}"
+        f"{fact_check_md}"
     )
     await msg.update()

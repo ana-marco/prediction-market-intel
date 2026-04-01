@@ -58,3 +58,9 @@ REPORT_NOTES.md
 PROJECT_PLAN.md
 DEV_NOTES.md
 Assignment_Brief.md
+
+# Chainlit auto-generated
+.chainlit/
+
+# Screenshots (for report, not code)
+screenshots/
