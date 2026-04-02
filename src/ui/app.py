@@ -6,20 +6,30 @@ verified sources (hallucination checking) and shows tool calls
 as visible steps in the conversation.
 """
 
+import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
 # Ensure project root is on sys.path so src.* imports resolve
 # when running: chainlit run src/ui/app.py
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+PROJECT_ROOT = str(Path(__file__).parent.parent.parent)
+sys.path.insert(0, PROJECT_ROOT)
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 import chainlit as cl
 
-from src.agent.agent import AgentResponse, run_agent_query
 from src.database.postgres import PostgresClient
+
+if sys.platform == "win32":
+    PYTHON = str(Path(PROJECT_ROOT) / "venv" / "Scripts" / "python.exe")
+else:
+    PYTHON = str(Path(PROJECT_ROOT) / "venv" / "bin" / "python")
+
+AGENT_SCRIPT = str(Path(PROJECT_ROOT) / "src" / "agent" / "agent.py")
 
 _executor = ThreadPoolExecutor(max_workers=1)
 
@@ -30,6 +40,52 @@ DEMO_QUERIES = [
     "What topics are trending across prediction markets and news?",
     "Compare what markets predict vs what news is reporting about climate change",
 ]
+
+
+def _run_agent_subprocess(query: str) -> dict:
+    """Run the agent as a separate process to avoid event loop conflicts.
+
+    Chainlit's async runtime conflicts with the MCP stdio client's
+    anyio TaskGroups. Running the agent in a subprocess fully isolates
+    the event loops.
+    """
+    result = subprocess.run(
+        [PYTHON, AGENT_SCRIPT, query, "--json"],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PYTHONPATH": PROJECT_ROOT},
+        timeout=300,
+    )
+    if result.returncode != 0:
+        return {
+            "success": False,
+            "error": result.stderr[-500:] if result.stderr else "Unknown error",
+            "response": "",
+            "sources": [],
+            "tools_used": [],
+            "fact_check": None,
+            "latency_ms": 0,
+        }
+
+    # JSON is on a single line (json.dumps without indent).
+    # MCP server banners and log lines precede it, so find the JSON line.
+    for line in reversed(result.stdout.strip().splitlines()):
+        line = line.strip()
+        if line.startswith("{"):
+            try:
+                return json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+    return {
+        "success": False,
+        "error": "No JSON output from agent",
+        "response": "",
+        "sources": [],
+        "tools_used": [],
+        "fact_check": None,
+        "latency_ms": 0,
+    }
 
 
 def format_sources(sources: list[dict]) -> str:
@@ -130,38 +186,36 @@ async def on_message(message: cl.Message):
     msg = cl.Message(content="")
     await msg.send()
 
-    # Run agent in a thread to avoid async conflicts
+    # Run agent as a subprocess to fully isolate event loops
     try:
         loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            _executor, run_agent_query, message.content
+        data = await loop.run_in_executor(
+            _executor, _run_agent_subprocess, message.content
         )
-    except Exception as e:
+    except BaseException as e:
         msg.content = f"**Execution error:** `{type(e).__name__}: {e}`"
         await msg.update()
         return
 
-    if not response.success:
-        msg.content = f"**Error:** {response.error}"
+    if not data.get("success"):
+        msg.content = f"**Error:** {data.get('error', 'Unknown error')}"
         await msg.update()
         return
 
     # Build response with metadata
-    tools_str = (
-        ", ".join(response.tools_used)
-        if response.tools_used
-        else "none"
-    )
-    latency = f"{response.latency_ms / 1000:.1f}s"
+    tools_used = data.get("tools_used", [])
+    tools_str = ", ".join(tools_used) if tools_used else "none"
+    latency = f"{data.get('latency_ms', 0) / 1000:.1f}s"
 
     # Sources section (hallucination checking: from tools, not LLM)
-    sources_md = format_sources(response.sources)
+    sources_md = format_sources(data.get("sources", []))
 
     # Fact-check section (AI-assisted verification by second agent)
     fact_check_md = ""
-    if response.fact_check:
-        confidence = response.fact_check.get("confidence", "N/A")
-        verification = response.fact_check.get("verification", "")
+    fact_check = data.get("fact_check")
+    if fact_check:
+        confidence = fact_check.get("confidence", "N/A")
+        verification = fact_check.get("verification", "")
 
         if confidence == "HIGH":
             fact_check_md = (
@@ -177,7 +231,7 @@ async def on_message(message: cl.Message):
             )
 
     msg.content = (
-        f"{response.response}\n\n"
+        f"{data.get('response', '')}\n\n"
         f"---\n"
         f"**Tools used:** {tools_str} | **Latency:** {latency}\n\n"
         f"### Sources\n"

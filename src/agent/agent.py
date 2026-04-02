@@ -25,8 +25,6 @@ from psycopg2.extras import Json as PgJson
 
 from src.database.postgres import PostgresClient
 
-nest_asyncio.apply()
-
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = str(Path(__file__).parent.parent.parent)
@@ -326,18 +324,10 @@ def run_agent_query(query: str) -> AgentResponse:
     a structured response with source attribution.
     """
     try:
-        # Use a fresh event loop to avoid conflicts when called
-        # from another async context (e.g., Chainlit's event loop)
-        loop = asyncio.new_event_loop()
-        try:
-            response = loop.run_until_complete(
-                _run_agent_async(query)
-            )
-        finally:
-            loop.close()
+        response = asyncio.run(_run_agent_async(query))
         _log_to_postgres(query, response)
         return response
-    except Exception as e:
+    except BaseException as e:
         logger.error(f"Agent query failed: {e}", exc_info=True)
         error_response = AgentResponse(
             response=f"Sorry, I encountered an error: {e}",
@@ -353,11 +343,26 @@ def run_agent_query(query: str) -> AgentResponse:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    query = sys.argv[1] if len(sys.argv) > 1 else "What are the top prediction markets right now?"
-    result = run_agent_query(query)
-    print(f"\n{'='*60}")
-    print(f"Response:\n{result.response}")
-    print(f"\nSources: {json.dumps(result.sources, indent=2)}")
-    print(f"Tools used: {result.tools_used}")
-    print(f"Latency: {result.latency_ms}ms")
-    print(f"Success: {result.success}")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    query = args[0] if args else "What are the top prediction markets right now?"
+
+    if "--json" in sys.argv:
+        # Machine-readable output for subprocess callers (e.g., Chainlit)
+        result = run_agent_query(query)
+        print(json.dumps({
+            "response": result.response,
+            "sources": result.sources,
+            "tools_used": result.tools_used,
+            "fact_check": result.fact_check,
+            "latency_ms": result.latency_ms,
+            "success": result.success,
+            "error": result.error,
+        }))
+    else:
+        result = run_agent_query(query)
+        print(f"\n{'='*60}")
+        print(f"Response:\n{result.response}")
+        print(f"\nSources: {json.dumps(result.sources, indent=2)}")
+        print(f"Tools used: {result.tools_used}")
+        print(f"Latency: {result.latency_ms}ms")
+        print(f"Success: {result.success}")
