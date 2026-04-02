@@ -1,6 +1,6 @@
 # Prediction Market Intelligence Agent
 
-An AI agent that monitors prediction markets (Polymarket), combines them with news and economic data, and provides event risk intelligence.
+An AI agent that analyses prediction markets (Polymarket), combines them with news and economic data, and provides event risk intelligence.
 
 **One-liner:** "What risks are prediction markets pricing right now, and what's driving them?"
 

@@ -33,12 +33,20 @@ def main():
     logger.info(f"Fetching up to {args.limit} markets from Polymarket...")
     
     pm = PolymarketClient(use_cache=args.use_cache)
-    markets = pm.get_markets(limit=args.limit)
-    
+    try:
+        markets = pm.get_markets(limit=args.limit)
+    except Exception as e:
+        logger.error(f"Failed to fetch markets from Polymarket: {e}")
+        sys.exit(1)
+
     logger.info(f"Fetched {len(markets)} markets")
-    
+
     db = PostgresClient()
-    count = db.upsert_markets(markets)
+    try:
+        count = db.upsert_markets(markets)
+    except Exception as e:
+        logger.error(f"Failed to store markets in PostgreSQL: {e}")
+        sys.exit(1)
     
     logger.info(f"Stored {count} markets in PostgreSQL")
     

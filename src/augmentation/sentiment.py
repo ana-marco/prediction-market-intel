@@ -5,7 +5,7 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 _analyzer = SentimentIntensityAnalyzer()
 
 
-def score_sentiment(text):
+def score_sentiment(text: str) -> dict:
     """Score sentiment of text using VADER lexicon.
 
     Args:

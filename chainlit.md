@@ -1,6 +1,6 @@
 # Prediction Market Intelligence Agent
 
-An AI agent that monitors prediction markets, news, and economic data to provide event risk intelligence.
+An AI agent that analyses prediction markets, news, and economic data to provide event risk intelligence.
 
 ## What can I ask?
 

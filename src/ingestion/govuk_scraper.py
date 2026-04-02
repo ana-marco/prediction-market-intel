@@ -7,7 +7,6 @@ Fulfills the web scraping requirement for the assignment.
 Target: https://www.gov.uk/search/news-and-communications
 """
 
-import os
 import json
 import logging
 import time

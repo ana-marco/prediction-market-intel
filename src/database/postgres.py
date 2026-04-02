@@ -88,10 +88,8 @@ class PostgresClient:
         
         logger.info("Database schema initialized")
     
-    # ==========================================
-    # MARKETS
-    # ==========================================
-    
+    # Market upserts and queries
+
     def upsert_market(self, market: dict) -> str:
         """Insert or update a market record."""
         if not market.get("id") or not market.get("question"):
@@ -204,9 +202,7 @@ class PostgresClient:
             cursor.execute(sql, (query, limit))
             return cursor.fetchall()
     
-    # ==========================================
-    # ARTICLES
-    # ==========================================
+    # Article inserts and search
     
     def insert_article(self, article: dict, source: str) -> int:
         """Insert a news article. Returns article ID."""
@@ -300,9 +296,7 @@ class PostgresClient:
             cursor.execute(sql, (query, limit))
             return cursor.fetchall()
     
-    # ==========================================
-    # ECONOMIC INDICATORS
-    # ==========================================
+    # Economic indicator storage and retrieval
     
     def insert_indicator(
         self,
@@ -368,9 +362,7 @@ class PostgresClient:
             cursor.execute(sql, (series_id, limit))
             return cursor.fetchall()
     
-    # ==========================================
-    # DATA LINEAGE
-    # ==========================================
+    # Data lineage tracking (provenance and checksums)
     
     def _record_lineage(
         self,

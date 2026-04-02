@@ -12,7 +12,6 @@ Target subreddits (curated for signal quality over volume):
 - r/economics - economic analysis (Fed, inflation)
 """
 
-import os
 import json
 import logging
 import time
@@ -21,9 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 import requests
-from dotenv import load_dotenv
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 # Cache directory

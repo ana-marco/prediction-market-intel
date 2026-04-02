@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import os
 import platform
 import subprocess
 import sys
@@ -86,7 +87,7 @@ def run_step(number, total, name, script):
     result = subprocess.run(
         [PYTHON, str(PROJECT_ROOT / script)],
         cwd=str(PROJECT_ROOT),
-        env={**__import__("os").environ, "PYTHONPATH": str(PROJECT_ROOT)},
+        env={**os.environ, "PYTHONPATH": str(PROJECT_ROOT)},
     )
     elapsed = time.time() - start
 
