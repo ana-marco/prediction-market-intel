@@ -21,6 +21,7 @@ from src.ingestion.reddit import RedditClient, DEFAULT_SUBREDDITS
 from src.database.mongo import MongoDBClient
 from src.database.postgres import PostgresClient
 from src.utils.topic_extraction import extract_topics_from_markets
+from src.augmentation.sentiment import score_sentiment
 
 logging.basicConfig(
     level=logging.INFO,
@@ -95,10 +96,48 @@ def main():
                 except Exception as e:
                     logger.error(f"  Search '{topic}': failed - {e}")
     
+    # Part 3: Sentiment augmentation (VADER)
+    logger.info("Running VADER sentiment analysis on unscored posts...")
+    scored = 0
+    try:
+        posts_collection = mongo.db["reddit_posts"]
+        unscored = list(posts_collection.find(
+            {"sentiment_label": {"$exists": False}},
+            {"_id": 1, "title": 1, "selftext": 1},
+        ))
+
+        if unscored:
+            from pymongo import UpdateOne
+
+            operations = []
+            for post in unscored:
+                try:
+                    text = f"{post.get('title', '')} {post.get('selftext', '')}"
+                    sentiment = score_sentiment(text)
+                    operations.append(UpdateOne(
+                        {"_id": post["_id"]},
+                        {"$set": {
+                            "sentiment_compound": sentiment["compound"],
+                            "sentiment_label": sentiment["label"],
+                        }},
+                    ))
+                except Exception as e:
+                    logger.warning(f"  Skipping post {post['_id']}: {e}")
+
+            if operations:
+                posts_collection.bulk_write(operations, ordered=False)
+            scored = len(operations)
+            logger.info(f"  Scored {scored} posts with VADER sentiment")
+        else:
+            logger.info("  All posts already have sentiment scores")
+    except Exception as e:
+        logger.error(f"  Sentiment scoring failed: {e}")
+
     # Show summary
     logger.info(f"Total: {total} posts stored in MongoDB")
-    
+
     print(f"\nStored {total} Reddit posts")
+    print(f"Sentiment scored: {scored} posts")
     print("\nPosts by subreddit:")
     
     for stat in mongo.get_subreddit_stats():

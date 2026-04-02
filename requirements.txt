@@ -11,6 +11,9 @@ chromadb>=0.4.22,<2.0.0
 # Data processing
 python-dotenv>=1.0.0,<2.0.0
 
+# Sentiment analysis
+vaderSentiment>=3.3.2,<4.0.0
+
 # Embeddings (used by ChromaDB's default embedding function)
 sentence-transformers>=2.2.0,<6.0.0
 

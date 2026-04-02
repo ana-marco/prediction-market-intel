@@ -176,12 +176,16 @@ class ChromaClient:
             
             ids.append(post_id)
             documents.append(text)
-            metadatas.append({
+            metadata = {
                 "type": "reddit",
                 "subreddit": post.get("subreddit", ""),
                 "score": post.get("score", 0),
                 "title": title[:200],
-            })
+            }
+            if "sentiment_compound" in post:
+                metadata["sentiment_compound"] = post["sentiment_compound"]
+                metadata["sentiment_label"] = post.get("sentiment_label", "neutral")
+            metadatas.append(metadata)
         
         if ids:
             collection.upsert(
