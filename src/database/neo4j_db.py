@@ -236,11 +236,13 @@ class Neo4jClient:
         OPTIONAL MATCH (i:Indicator)-[:MEASURES]->(t)
         OPTIONAL MATCH (other:Market)-[:ABOUT]->(t)
         WHERE other.id <> $market_id
+        WITH m, t, a, i, other
+        ORDER BY a.published_at DESC
         RETURN m.question as market,
                collect(DISTINCT t.name) as topics,
-               collect(DISTINCT {title: a.title, source: a.source, url: a.url}) as articles,
+               collect(DISTINCT {title: a.title, source: a.source, url: a.url})[0..10] as articles,
                collect(DISTINCT {series_id: i.series_id, name: i.name, value: i.latest_value}) as indicators,
-               collect(DISTINCT {id: other.id, question: other.question}) as related_markets
+               collect(DISTINCT {id: other.id, question: other.question})[0..5] as related_markets
         """
         
         with self.driver.session() as session:
