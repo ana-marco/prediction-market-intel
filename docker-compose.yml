@@ -59,7 +59,7 @@ services:
     ports:
       - "8001:8000"  # 8000 reserved for Chainlit UI
     volumes:
-      - chroma_data:/chroma/chroma
+      - chroma_data:/data  # chromadb 1.5.x stores data at /data, not /chroma/chroma
     environment:
       ANONYMIZED_TELEMETRY: "false"
     healthcheck:
