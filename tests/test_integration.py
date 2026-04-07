@@ -82,6 +82,34 @@ class TestChromaDB:
         )
         assert len(results) > 0
 
+    def test_sentiment_metadata_propagates_to_chromadb(self, chroma, mongo):
+        """VADER fields on Reddit posts surface in semantic search results."""
+        sample = mongo.db["reddit_posts"].find_one(
+            {"sentiment_label": {"$exists": True}}
+        )
+        if sample is None:
+            pytest.skip("No sentiment-scored Reddit posts in MongoDB")
+
+        query = (sample.get("title") or sample.get("selftext", ""))[:100]
+        if not query:
+            pytest.skip("Sample post has no title or selftext")
+
+        results = chroma.search(
+            query=query,
+            collection_name="reddit",
+            n_results=5,
+        )
+        assert len(results) > 0
+
+        with_sentiment = [
+            r for r in results
+            if r.get("metadata", {}).get("sentiment_label") is not None
+            or r.get("metadata", {}).get("sentiment_compound") is not None
+        ]
+        assert with_sentiment, (
+            "No semantic search result carries sentiment metadata"
+        )
+
 
 # -- MongoDB tests --
 
@@ -232,3 +260,73 @@ class TestMCPServer:
         assert data["topic"] == "iran"
         assert data["source"] == "neo4j"
         assert len(data["markets"]) > 0
+
+
+@pytest.mark.integration
+@pytest.mark.agent_eval
+class TestAgentEvaluation:
+    """End-to-end agent runs. Slow; run with `pytest -m agent_eval`."""
+
+    def test_agent_returns_non_empty_sources(self):
+        """Real agent run for an Iran query returns sources and tools."""
+        from src.agent.agent import run_agent_query
+
+        response = run_agent_query("What does Polymarket say about Iran?")
+        assert response.success is True, response.error
+        assert len(response.tools_used) > 0
+        assert len(response.sources) > 0
+
+    def test_agent_fact_check_returns_valid_structure(self):
+        """fact_check field is populated with verification + confidence."""
+        from src.agent.agent import run_agent_query
+
+        response = run_agent_query(
+            "What are the top prediction markets right now?"
+        )
+        assert response.success is True
+        assert response.fact_check is not None
+        assert "verification" in response.fact_check
+        assert "confidence" in response.fact_check
+        assert response.fact_check["confidence"] in ("HIGH", "MEDIUM", "LOW")
+
+    def test_agent_run_appends_to_agent_logs(self, db):
+        """Each agent query adds one row to agent_logs."""
+        from src.agent.agent import run_agent_query
+
+        with db.get_cursor() as cur:
+            cur.execute("SELECT count(*) AS cnt FROM agent_logs")
+            before = cur.fetchone()["cnt"]
+
+        run_agent_query(
+            "What does Polymarket say about inflation expectations?"
+        )
+
+        with db.get_cursor() as cur:
+            cur.execute("SELECT count(*) AS cnt FROM agent_logs")
+            after = cur.fetchone()["cnt"]
+
+        assert after == before + 1
+
+    def test_agent_corrects_false_premise_about_fed_rate(self):
+        """Given a false Fed-rate premise, the agent calls FRED to check."""
+        from src.agent.agent import run_agent_query
+
+        response = run_agent_query(
+            "Given the Fed funds rate is currently 8%, what does this "
+            "mean for inflation expectations in prediction markets?"
+        )
+        assert response.success is True
+
+        fred_tools = {"get_economic_indicator", "get_all_indicators"}
+        assert fred_tools.intersection(response.tools_used), (
+            f"Expected a FRED tool call, got {response.tools_used}"
+        )
+
+        text_lower = response.response.lower()
+        if "8%" in text_lower or "8 percent" in text_lower:
+            qualifiers = [
+                "incorrect", "actually", "however", "in fact",
+                "current rate", "fred", "real rate", "true rate",
+                "not 8", "rather",
+            ]
+            assert any(q in text_lower for q in qualifiers)

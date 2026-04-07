@@ -25,6 +25,23 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "integration: requires Docker databases"
     )
+    config.addinivalue_line(
+        "markers",
+        "agent_eval: end-to-end agent runs against the live LLM "
+        "(slow, ~30-60s per test, run on demand via pytest -m agent_eval)"
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip agent_eval tests unless `-m agent_eval` is passed."""
+    selected = config.getoption("-m") or ""
+    if "agent_eval" in selected:
+        return
+
+    skip = pytest.mark.skip(reason="run with `pytest -m agent_eval`")
+    for item in items:
+        if "agent_eval" in item.keywords:
+            item.add_marker(skip)
 
 
 @pytest.fixture

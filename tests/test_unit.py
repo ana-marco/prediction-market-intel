@@ -196,3 +196,33 @@ class TestExtractSourcesAndTools:
         sources, tools = _extract_sources_and_tools([])
         assert sources == []
         assert tools == []
+
+    def test_sources_unaffected_by_llm_fabrication(self):
+        """A fabricated URL in LLM text does not leak into the sources list."""
+        from langchain_core.messages import AIMessage
+
+        real_url = "https://polymarket.com/event/real-iran-market-2026"
+        fake_url = "https://polymarket.com/event/COMPLETELY-FAKE-MARKET"
+
+        tool_msg = _make_tool_message("search_markets", {
+            "source": "polymarket",
+            "source_type": "prediction_market",
+            "markets": [{
+                "question": "Will US take military action against Iran in 2026?",
+                "url": real_url,
+                "yes_probability": "65.0%",
+            }],
+        })
+
+        fabricated_ai_msg = AIMessage(
+            content=f"The market is at {fake_url} with 99% probability."
+        )
+
+        sources, tools = _extract_sources_and_tools(
+            [tool_msg, fabricated_ai_msg]
+        )
+
+        urls = [s.get("url") for s in sources if "url" in s]
+        assert real_url in urls
+        assert fake_url not in urls
+        assert "search_markets" in tools
